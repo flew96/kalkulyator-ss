@@ -1,0 +1,8 @@
+{
+  "name": "kalkulyator-ss",
+  "private": true,
+  "description": "Калькулятор систем счисления",
+  "scripts": {
+    "test": "node --test"
+  }
+}
