@@ -5,19 +5,34 @@
   const DIGITS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const GROUP_SIZE = { 2: 4, 8: 3, 10: 3, 16: 4 };
 
+  // Interface language for names, messages and the decimal separator: 'ru' or 'en'.
+  let LANG = 'ru';
+  const setLang = l => { LANG = l === 'en' ? 'en' : 'ru'; };
+  const getLang = () => LANG;
+  const decSep = () => (LANG === 'en' ? '.' : ',');
+
   const NAMES = {
-    2: 'двоичная', 3: 'троичная', 4: 'четверичная', 5: 'пятеричная', 6: 'шестеричная', 7: 'семеричная',
-    8: 'восьмеричная', 9: 'девятеричная', 10: 'десятичная', 11: 'одиннадцатеричная', 12: 'двенадцатеричная',
-    13: 'тринадцатеричная', 14: 'четырнадцатеричная', 15: 'пятнадцатеричная', 16: 'шестнадцатеричная',
-    20: 'двадцатеричная', 32: 'тридцатидвухричная', 36: 'тридцатишестеричная'
+    ru: {
+      2: 'двоичная', 3: 'троичная', 4: 'четверичная', 5: 'пятеричная', 6: 'шестеричная', 7: 'семеричная',
+      8: 'восьмеричная', 9: 'девятеричная', 10: 'десятичная', 11: 'одиннадцатеричная', 12: 'двенадцатеричная',
+      13: 'тринадцатеричная', 14: 'четырнадцатеричная', 15: 'пятнадцатеричная', 16: 'шестнадцатеричная',
+      20: 'двадцатеричная', 32: 'тридцатидвухричная', 36: 'тридцатишестеричная'
+    },
+    en: {
+      2: 'binary', 3: 'ternary', 4: 'quaternary', 5: 'quinary', 6: 'senary', 7: 'septenary',
+      8: 'octal', 9: 'nonary', 10: 'decimal', 11: 'undecimal', 12: 'duodecimal',
+      13: 'tridecimal', 14: 'tetradecimal', 15: 'pentadecimal', 16: 'hexadecimal',
+      20: 'vigesimal', 32: 'duotrigesimal', 36: 'hexatrigesimal'
+    }
   };
-  const nameOf = b => NAMES[b] || `${b}-ичная`;
-  const nameIn = b => nameOf(b).replace(/ая$/, 'ой');
-  const nameTo = b => nameOf(b).replace(/ая$/, 'ую');
+  const nameOf = b => NAMES[LANG][b] || (LANG === 'en' ? `base-${b}` : `${b}-ичная`);
+  // Russian adjectives change ending by case: "в двоичной системе", "в двоичную"
+  const nameIn = b => (LANG === 'en' ? nameOf(b) : nameOf(b).replace(/ая$/, 'ой'));
+  const nameTo = b => (LANG === 'en' ? nameOf(b) : nameOf(b).replace(/ая$/, 'ую'));
 
   const abs = v => (v < 0n ? -v : v);
   const bitLen = v => (v === 0n ? 0 : v.toString(2).length);
-  const num = v => v.toLocaleString('ru-RU');
+  const num = v => v.toLocaleString(LANG === 'en' ? 'en-US' : 'ru-RU');
   function plural(n, one, few, many) {
     const a = n % 10, b = n % 100;
     if (a === 1 && b !== 11) return one;
@@ -63,27 +78,57 @@
   function fmtRat(num, den, b) {
     const e = expand(num, den, b);
     let s = (e.neg ? '−' : '') + groupStr(e.int, GROUP_SIZE[b] || 0);
-    if (e.pre || e.rep) s += ',' + e.pre + (e.rep ? `(${e.rep})` : '') + (e.cut ? '…' : '');
+    if (e.pre || e.rep) s += decSep() + e.pre + (e.rep ? `(${e.rep})` : '') + (e.cut ? '…' : '');
     return s;
   }
 
   /* ---------- parsing ---------- */
-  const digitRange = b => (b <= 10 ? `0–${b - 1}` : `0–9 и A–${DIGITS[b - 1]}`);
-  const digitsOf = b => (b === 2 ? '0 и 1' : digitRange(b));
+  const and = () => (LANG === 'en' ? 'and' : 'и');
+  const digitRange = b => (b <= 10 ? `0–${b - 1}` : `0–9 ${and()} A–${DIGITS[b - 1]}`);
+  const digitsOf = b => (b === 2 ? `0 ${and()} 1` : digitRange(b));
+
+  const MSG = {
+    ru: {
+      oneSep: 'Запятая может быть только одна, а период пишется в скобках в самом конце: 0,1(6).',
+      needDigit: 'Нужна хотя бы одна цифра.',
+      notDigit: (ch, b) => `«${ch}» не цифра в ${nameIn(b)} системе. Допустимы ${digitRange(b)}.`,
+      romanNeg: 'Отрицательных чисел римляне не записывали.',
+      romanZero: 'Нуля в римской записи нет. Средневековые счётчики ставили N, от латинского nulla.',
+      romanBig: 'Больше 3 999 999 римскими цифрами не записать даже с чертой.',
+      romanRule: 'Значения цифр складываются. Меньшая цифра перед большей вычитается: IV = 4.',
+      romanVinc: 'Черта над цифрой умножает её на 1000. Этот приём называется винкулум.',
+      romanBad: 'Это не римское число. Пример правильной записи: MCMLVIII.'
+    },
+    en: {
+      oneSep: 'Use only one decimal point, and put the repeating part in brackets at the very end: 0.1(6).',
+      needDigit: 'Enter at least one digit.',
+      notDigit: (ch, b) => `“${ch}” is not a digit in ${nameOf(b)}. Allowed: ${digitRange(b)}.`,
+      romanNeg: 'The Romans did not write negative numbers.',
+      romanZero: 'Roman numerals have no zero. Medieval scribes wrote N, from the Latin nulla.',
+      romanBig: 'Numbers above 3,999,999 cannot be written in Roman numerals, even with the bar.',
+      romanRule: 'Digit values add up. A smaller digit before a larger one is subtracted: IV = 4.',
+      romanVinc: 'A bar over a digit multiplies it by 1000. This is called a vinculum.',
+      romanBad: 'This is not a Roman numeral. A valid example: MCMLVIII.'
+    }
+  };
+  const msg = (k, ...a) => { const m = MSG[LANG][k]; return typeof m === 'function' ? m(...a) : m; };
+
   // Accepts "12,375", "12.375", "0,1(6)" (period in brackets) and a trailing "…" from truncated output.
+  // In English a comma groups thousands ("1,958"), so only the point separates the fraction.
   function parsePositional(raw, base) {
     let s = raw.replace(/[\s_'\u00a0\u2009]/g, '').replace(/…$/, '');
+    if (LANG === 'en') s = s.replace(/,/g, '');
     if (s === '') return { num: 0n, den: 1n, empty: true };
     let neg = false;
     if (/^[-−]/.test(s)) { neg = true; s = s.slice(1); }
     const pre = { 2: '0b', 8: '0o', 16: '0x' }[base];
     if (pre && s.toLowerCase().startsWith(pre)) s = s.slice(2);
     const m = s.match(/^([^.,()]*)(?:[.,]([^.,()]*)(?:\(([^.,()]+)\))?)?$/);
-    if (!m) return { error: 'Запятая может быть только одна, а период пишется в скобках в самом конце: 0,1(6).' };
+    if (!m) return { error: msg('oneSep') };
     const [, ip, fp = '', rp = ''] = m;
-    if (!ip && !fp && !rp) return { error: 'Нужна хотя бы одна цифра.' };
+    if (!ip && !fp && !rp) return { error: msg('needDigit') };
     const bad = [...(ip + fp + rp)].find(ch => { const d = DIGITS.indexOf(ch.toUpperCase()); return d < 0 || d >= base; });
-    if (bad) return { error: `«${bad}» не цифра в ${nameIn(base)} системе. Допустимы ${digitRange(base)}.` };
+    if (bad) return { error: msg('notDigit', bad, base) };
     const B = BigInt(base), up = x => x.toUpperCase();
     const I = digitsVal(up(ip), base), P = digitsVal(up(fp), base), scale = B ** BigInt(fp.length);
     let n, d;
@@ -109,22 +154,22 @@
     return t;
   }
   function toRoman(v) {
-    if (v < 0n) return { text: '—', note: 'Отрицательных чисел римляне не записывали.' };
-    if (v === 0n) return { text: 'N', note: 'Нуля в римской записи нет. Средневековые счётчики ставили N, от латинского nulla.' };
-    if (v > 3999999n) return { text: '—', note: 'Больше 3 999 999 римскими цифрами не записать даже с чертой.' };
+    if (v < 0n) return { text: '—', note: msg('romanNeg') };
+    if (v === 0n) return { text: 'N', note: msg('romanZero') };
+    if (v > 3999999n) return { text: '—', note: msg('romanBig') };
     const n = Number(v);
-    if (n < 4000) return { text: romanSmall(n), note: 'Значения цифр складываются. Меньшая цифра перед большей вычитается: IV = 4.' };
+    if (n < 4000) return { text: romanSmall(n), note: msg('romanRule') };
     const hi = Math.floor(n / 1000), lo = n % 1000;
     return {
       text: [...romanSmall(hi)].map(c => c + '\u0305').join('') + romanSmall(lo),
-      note: 'Черта над цифрой умножает её на 1000. Этот приём называется винкулум.'
+      note: msg('romanVinc')
     };
   }
   function parseRoman(raw) {
     const s = raw.toUpperCase().replace(/\s/g, '');
     if (s === '') return { num: 0n, den: 1n, empty: true };
     if (s === 'N') return { num: 0n, den: 1n };
-    const bad = { error: 'Это не римское число. Пример правильной записи: MCMLVIII.' };
+    const bad = { error: msg('romanBad') };
     const m = s.match(/^((?:[IVXLCDM]\u0305)*)([IVXLCDM]*)$/);
     if (!m) return bad;
     const hi = m[1].replace(/\u0305/g, ''), lo = m[2];
@@ -166,7 +211,7 @@
     return { text: (v < 0n ? '−' : '') + text, terms };
   }
 
-  const api = { DIGITS, GROUP_SIZE, NAMES, nameOf, nameIn, nameTo, abs, bitLen, num, plural, groupStr, fmt, clampBase, gcd, makeRat, digitsVal, FRAC_LIMIT, expand, fmtRat, digitRange, digitsOf, parsePositional, toRoman, parseRoman, balTernary, zeckendorf, factoradic };
+  const api = { setLang, getLang, decSep, msg, DIGITS, GROUP_SIZE, NAMES, nameOf, nameIn, nameTo, abs, bitLen, num, plural, groupStr, fmt, clampBase, gcd, makeRat, digitsVal, FRAC_LIMIT, expand, fmtRat, digitRange, digitsOf, parsePositional, toRoman, parseRoman, balTernary, zeckendorf, factoradic };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Convert = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

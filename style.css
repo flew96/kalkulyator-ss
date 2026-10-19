@@ -71,7 +71,16 @@ button { font: inherit; cursor: pointer; }
 sub, sup { font-size: .62em; line-height: 0; }
 
 /* Header */
-.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 40px; margin-bottom: -28px; }
+.top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 24px; margin-bottom: -28px; }
+.top .lede { grid-column: 1 / -1; }
+.lang { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+.lang button {
+  min-width: 44px; min-height: 34px; padding: 0 12px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--muted); font: 600 13px var(--f-mono); letter-spacing: .04em;
+  transition: background-color 150ms, color 150ms;
+}
+.lang button:hover { color: var(--ink); }
+.lang button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
 h1 {
   margin: 0; font: 700 clamp(30px, 5vw, 48px)/1 var(--f-display);
   letter-spacing: -.03em; text-wrap: balance;

@@ -1,6 +1,9 @@
-// Page logic for Калькулятор СС: converter rows, switch panel, worked examples. Needs convert.js first.
+// Page logic for Калькулятор СС: converter rows, switch panel, worked examples.
+// Needs convert.js and i18n.js first.
 (() => {
-  const { DIGITS, GROUP_SIZE, NAMES, nameOf, nameIn, nameTo, abs, bitLen, num, plural, groupStr, fmt, clampBase, gcd, makeRat, digitsVal, FRAC_LIMIT, expand, fmtRat, digitRange, digitsOf, parsePositional, toRoman, parseRoman, balTernary, zeckendorf, factoradic } = window.Convert;
+  const C = window.Convert;
+  const { DIGITS, abs, bitLen, num, groupStr, fmt, clampBase, makeRat, digitsVal, expand, fmtRat, digitsOf,
+    decSep, msg, parsePositional, toRoman, parseRoman, balTernary, zeckendorf, factoradic } = C;
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const WIDTHS = [8, 16, 32, 64];
@@ -8,15 +11,35 @@
 
   const state = { num: 1958n, den: 1n, empty: false, width: 16, group: 4, custom: 12, ex: 12 };
 
-  const HINTS = {
-    3: 'Обычная троичная. Сбалансированный вариант, как у «Сетуни», внизу среди необычных систем.',
-    5: 'Счёт по пальцам одной руки.',
-    12: 'Дюжинная: 12 делится на 2, 3, 4 и 6. Отсюда дюжины, гроссы и 12 часов на циферблате.',
-    20: 'Двадцатеричной системой пользовались майя: пальцы рук и ног.',
-    32: 'Основание кодировки Base32.',
-    36: 'Все десять цифр и все 26 латинских букв. Так часто кодируют короткие ссылки.'
-  };
-  const cap = s => s[0].toUpperCase() + s.slice(1);
+  /* ---------- language ---------- */
+  const LANG_KEY = 'calculator-cc-lang';
+  let lang = 'ru';
+  const t = (k, ...a) => { const v = window.I18N[lang].t[k]; return typeof v === 'function' ? v(...a) : v; };
+  // Russian texts are the page's own markup; remember them so switching back restores them.
+  const ruStatic = {}, ruAttrs = {};
+  const attrPairs = el => el.dataset.i18nAttr.split(';').map(p => p.split(':'));
+  $$('[data-i18n]').forEach(el => { ruStatic[el.dataset.i18n] = el.innerHTML; });
+  $$('[data-i18n-attr]').forEach(el => attrPairs(el).forEach(([attr, key]) => { ruAttrs[key] = el.getAttribute(attr); }));
+  function applyStatic() {
+    const en = window.I18N.en.static;
+    $$('[data-i18n]').forEach(el => {
+      const v = lang === 'en' ? en[el.dataset.i18n] : ruStatic[el.dataset.i18n];
+      if (v != null) el.innerHTML = v;
+    });
+    $$('[data-i18n-attr]').forEach(el => attrPairs(el).forEach(([attr, key]) => {
+      const v = lang === 'en' ? en[key] : ruAttrs[key];
+      if (v != null) el.setAttribute(attr, v);
+    }));
+    document.documentElement.lang = lang;
+    document.title = window.I18N[lang].title;
+    $$('#langSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === lang));
+  }
+  function initialLang() {
+    const h = location.hash.slice(1);
+    if (h === 'en' || h === 'ru') return h;
+    try { const s = localStorage.getItem(LANG_KEY); if (s === 'en' || s === 'ru') return s; } catch (err) { /* no storage */ }
+    return /^(ru|uk|be|kk)\b/i.test(navigator.language || '') ? 'ru' : 'en';
+  }
 
   /* ---------- the current value as parts ---------- */
   const intOf = () => state.num / state.den;
@@ -27,46 +50,48 @@
 
   /* ---------- converter rows ---------- */
   const COPY_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-  const COPY_HTML = COPY_SVG + '<span class="copy-t">Копировать</span>';
+  const copyHtml = () => COPY_SVG + `<span class="copy-t">${t('copy')}</span>`;
   const ROWS = [
-    { id: 'f2', base: '2', name: 'Двоичная', ph: 'например, 101101' },
-    { id: 'f8', base: '8', name: 'Восьмеричная', ph: 'например, 755' },
-    { id: 'f10', base: '10', name: 'Десятичная', ph: 'например, 2026' },
-    { id: 'f16', base: '16', name: 'Шестнадцатеричная', ph: 'например, 1F4' },
+    { id: 'f2', base: '2', ex: '101101' },
+    { id: 'f8', base: '8', ex: '755' },
+    { id: 'f10', base: '10', ex: '2026' },
+    { id: 'f16', base: '16', ex: '1F4' },
     { id: 'fc', base: 'c', custom: true }
   ];
-  $('#rows').innerHTML = ROWS.map(r => `
+  function buildRows() {
+    $('#rows').innerHTML = ROWS.map(r => `
     <div class="row">
       <div class="badge">${r.custom
-        ? `<input type="number" id="cb" min="2" max="36" value="${state.custom}" inputmode="numeric" aria-label="Своё основание от 2 до 36">`
+        ? `<input type="number" id="cb" min="2" max="36" value="${state.custom}" inputmode="numeric" aria-label="${t('customAria')}">`
         : `<span aria-hidden="true">${r.base}</span>`}</div>
       <div class="row-main">
-        <label class="row-name" for="${r.id}"${r.custom ? ' id="fcName"' : ''}>${r.custom ? '' : `${r.name} <span class="lc">· цифры ${digitsOf(+r.base)}</span>`}</label>
-        <textarea id="${r.id}" class="num" data-base="${r.base}" rows="1" spellcheck="false" autocomplete="off" autocapitalize="characters" placeholder="${r.ph || ''}" aria-describedby="${r.id}e"></textarea>
+        <label class="row-name" for="${r.id}"${r.custom ? ' id="fcName"' : ''}>${r.custom ? '' : t('rowName', +r.base, digitsOf(+r.base))}</label>
+        <textarea id="${r.id}" class="num" data-base="${r.base}" rows="1" spellcheck="false" autocomplete="off" autocapitalize="characters" placeholder="${r.ex ? t('eg', r.ex) : ''}" aria-describedby="${r.id}e"></textarea>
         <p class="err" id="${r.id}e" hidden></p>
         ${r.custom ? '<p class="hint" id="cbHint"></p>' : ''}
       </div>
       <div class="row-side">
-        ${r.custom ? '<div class="step"><button type="button" data-step="-1" aria-label="Основание на 1 меньше">−</button><button type="button" data-step="1" aria-label="Основание на 1 больше">+</button></div>' : ''}
+        ${r.custom ? `<div class="step"><button type="button" data-step="-1" aria-label="${t('stepDown')}">−</button><button type="button" data-step="1" aria-label="${t('stepUp')}">+</button></div>` : ''}
         <span class="count" data-count></span>
-        <button type="button" class="copy" data-copy="${r.id}" aria-label="Копировать">${COPY_HTML}</button>
+        <button type="button" class="copy" data-copy="${r.id}" aria-label="${t('copy')}">${copyHtml()}</button>
       </div>
     </div>`).join('');
-  $$('.exo .copy').forEach(b => { b.innerHTML = COPY_HTML; b.setAttribute('aria-label', 'Копировать'); });
+    $$('.exo .copy').forEach(b => { b.innerHTML = copyHtml(); b.setAttribute('aria-label', t('copy')); });
+  }
 
   const baseOf = el => (el.dataset.base === 'c' ? state.custom : +el.dataset.base);
   function autosize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
-  function setError(el, msg) {
+  function setError(el, text) {
     const box = $('#' + el.id + 'e');
-    box.textContent = msg || '';
-    box.hidden = !msg;
-    el.setAttribute('aria-invalid', msg ? 'true' : 'false');
-    el.closest('.row, .card').classList.toggle('bad', !!msg);
+    box.textContent = text || '';
+    box.hidden = !text;
+    el.setAttribute('aria-invalid', text ? 'true' : 'false');
+    el.closest('.row, .card').classList.toggle('bad', !!text);
   }
   function renderCustomLabel() {
-    $('#fcName').innerHTML = `Своё основание <span class="lc">· ${nameOf(state.custom)}, цифры ${digitsOf(state.custom)}</span>`;
-    $('#fc').placeholder = 'например, ' + (2026n).toString(state.custom).toUpperCase();
-    $('#cbHint').textContent = HINTS[state.custom] || '';
+    $('#fcName').innerHTML = t('customName', state.custom, digitsOf(state.custom));
+    $('#fc').placeholder = t('eg', (2026n).toString(state.custom).toUpperCase());
+    $('#cbHint').textContent = t('hints')[state.custom] || '';
     const cb = $('#cb');
     if (+cb.value !== state.custom) cb.value = state.custom;
   }
@@ -85,12 +110,8 @@
         el.value = txt;
         setError(el, null);
       }
-      const e = expand(state.num, state.den, b), len = e.int.length, fl = e.pre.length + e.rep.length;
-      let count = `${num(len)} ${plural(len, 'разряд', 'разряда', 'разрядов')}`;
-      if (e.rep) count += `<br>период из ${e.rep.length}`;
-      else if (e.cut) count += `<br>первые ${fl} после запятой`;
-      else if (fl) count += `<br>${fl} после запятой`;
-      el.closest('.row').querySelector('[data-count]').innerHTML = state.empty ? '' : count;
+      const e = expand(state.num, state.den, b);
+      el.closest('.row').querySelector('[data-count]').innerHTML = state.empty ? '' : t('count', e.int.length, e);
       autosize(el);
     });
   }
@@ -118,9 +139,9 @@
       el.dataset.hi = hi;
       let html = '<div class="sw-row">';
       for (let i = hi - 1; i >= lo; i--) {
-        const weight = i <= 20 ? num(2 ** i) : `2 в степени ${i}`;
+        const label = t('bit', i, i <= 20 ? num(2 ** i) : t('pow2', i));
         html += `<div class="bit" style="--i:${i}"><span class="idx">${i}</span><span class="led"></span>` +
-          `<button type="button" class="sw" data-bit="${i}" aria-pressed="false" aria-label="Бит ${i}, вес ${weight}" title="Бит ${i}, вес ${weight}"><span class="paddle"></span></button></div>`;
+          `<button type="button" class="sw" data-bit="${i}" aria-pressed="false" aria-label="${label}" title="${label}"><span class="paddle"></span></button></div>`;
       }
       html += '</div><span class="gline"></span><output class="gdigit"></output>';
       el.innerHTML = html;
@@ -129,7 +150,7 @@
     rowEls.reverse().forEach(r => bank.append(r));
   }
   function updatePanel(mag = intMag()) {
-    const w = effWidth(), key = w + '/' + state.group;
+    const w = effWidth(), key = w + '/' + state.group + '/' + lang;
     if (key !== panelKey) {
       const focused = document.activeElement && document.activeElement.dataset.bit;
       buildPanel(w, state.group);
@@ -152,9 +173,9 @@
     vfd.textContent = fmtRat(state.num, state.den, 10);
     vfd.classList.toggle('long', vfd.textContent.length > 26);
     const len = bitLen(intMag()), note = $('#pnote'), msgs = [];
-    if (len > 64) msgs.push(`Показаны младшие 64 бита из ${len}.`);
-    else if (w > state.width) msgs.push(`Число не помещается в ${state.width} бит, пульт расширен до ${w}.`);
-    if (fracNum() !== 0n) msgs.push(`Тумблеры показывают целую часть. Дробная часть в двоичной: ${fmtRat(fracNum(), state.den, 2)}.`);
+    if (len > 64) msgs.push(t('low64', len));
+    else if (w > state.width) msgs.push(t('wider', state.width, w));
+    if (fracNum() !== 0n) msgs.push(t('fracBits', fmtRat(fracNum(), state.den, 2)));
     note.textContent = msgs.join(' ');
     note.hidden = !msgs.length;
   }
@@ -162,7 +183,7 @@
   /* ---------- exotic ---------- */
   function renderExotic(source) {
     const fr = $('#fr');
-    const r = state.empty ? { text: '', note: 'Значения цифр складываются. Меньшая цифра перед большей вычитается: IV = 4.' } : toRoman(intOf());
+    const r = state.empty ? { text: '', note: msg('romanRule') } : toRoman(intOf());
     if (fr !== source) { fr.value = r.text; setError(fr, null); }
     $('#frNote').textContent = r.note;
     autosize(fr);
@@ -170,16 +191,16 @@
     const iv = intOf(), z = zeckendorf(iv), f = factoradic(iv), dash = '—';
     const exoNote = $('#exoNote');
     exoNote.hidden = state.empty || fracNum() === 0n;
-    exoNote.textContent = `Эти системы записывают только целые числа, поэтому здесь показана целая часть: ${fmt(iv, 10)}.`;
+    exoNote.textContent = t('exoInt', fmt(iv, 10));
     $('#xSetun').textContent = state.empty ? dash : balTernary(iv);
     $('#xFib').textContent = state.empty ? dash : z.text;
     $('#xFact').textContent = state.empty ? dash : f.text;
 
     const zt = z.terms.slice(0, 7).map(num).join(' + ') + (z.terms.length > 7 ? ' + …' : '');
-    $('#xFibCap').innerHTML = 'Сумма разных чисел Фибоначчи, и две единицы подряд не встречаются (теорема Цекендорфа).' +
+    $('#xFibCap').innerHTML = t('fibCap') +
       (z.terms.length && !state.empty ? `<span class="mono">${num(abs(iv))} = ${zt}</span>` : '');
     const ft = f.terms.slice(0, 6).map(([d, k]) => `${d}·${k}!`).join(' + ') + (f.terms.length > 6 ? ' + …' : '');
-    $('#xFactCap').innerHTML = 'Вес разряда с номером k равен k!, а цифра в нём не больше k. Последняя цифра всегда 0.' +
+    $('#xFactCap').innerHTML = t('factCap') +
       (f.terms.length && !state.empty ? `<span class="mono">${num(abs(iv))} = ${ft}</span>` : '');
   }
 
@@ -192,42 +213,42 @@
     const exB = $('#exB');
     if (document.activeElement !== exB && !preset) exB.value = b;
 
-    $('#exToT').textContent = `Из десятичной в ${nameTo(b)} (b = ${b})`;
-    $('#exFromT').textContent = `Из ${nameIn(b)} в десятичную (b = ${b})`;
+    $('#exToT').textContent = t('exToT', b);
+    $('#exFromT').textContent = t('exFromT', b);
     const notes = [];
-    if (!state.empty && isNeg()) notes.push('Число отрицательное: переводим модуль, а минус переносим без изменений.');
-    if (!state.empty && fracNum() !== 0n) notes.push('Целую и дробную части переводят отдельно: целая ниже, дробная в карточке «Дробная часть».');
+    if (!state.empty && isNeg()) notes.push(t('noteNeg'));
+    if (!state.empty && fracNum() !== 0n) notes.push(t('noteFrac'));
     $('#exNeg').textContent = notes.join(' ');
     $('#exNeg').hidden = !notes.length;
     renderFrac(b);
 
     const ladder = $('#ladder'), tiles = $('#tiles'), sum = $('#sumline'), horner = $('#horner'), chunks = $('#chunks');
     if (state.empty) {
-      $('#exToEx').textContent = $('#exFromEx').textContent = 'Пример';
-      const msg = '<p class="muted">Впишите число в конвертер наверху, и здесь появится пример.</p>';
-      ladder.innerHTML = tiles.innerHTML = chunks.innerHTML = msg;
+      $('#exToEx').textContent = $('#exFromEx').textContent = t('example');
+      const note = `<p class="muted">${t('typeFirst')}</p>`;
+      ladder.innerHTML = tiles.innerHTML = chunks.innerHTML = note;
       sum.textContent = horner.textContent = '';
       return;
     }
-    $('#exToEx').innerHTML = `Пример: ${num(n)}<sub>10</sub> → ${b}-ичная`;
-    $('#exFromEx').innerHTML = `Пример: ${s}<sub>${b}</sub> → десятичная`;
+    $('#exToEx').innerHTML = t('exTo', num(n), b);
+    $('#exFromEx').innerHTML = t('exFrom', s, b);
 
     // 10 → b: division ladder
-    if (n === 0n) ladder.innerHTML = '<p class="muted">Ноль в любой системе записывается как 0.</p>';
-    else if (s.length > 40) ladder.innerHTML = `<p class="muted">Понадобится ${num(s.length)} делений. Лесенку показываем для чисел до 40 разрядов.</p>`;
+    if (n === 0n) ladder.innerHTML = `<p class="muted">${t('zero')}</p>`;
+    else if (s.length > 40) ladder.innerHTML = `<p class="muted">${t('tooManyDiv', num(s.length))}</p>`;
     else {
-      const rows = [];
+      const rows = [], [hDiv, hQuot, hRem, hOrder] = t('ladderHead');
       for (let x = n; x > 0n; x /= B) rows.push([x, x / B, Number(x % B)]);
-      ladder.innerHTML = `<table class="ladder"><thead><tr><th>Делимое</th><th></th><th>Частное</th><th>Остаток</th><th><span class="sr">Порядок чтения</span></th></tr></thead><tbody>` +
+      ladder.innerHTML = `<table class="ladder"><thead><tr><th>${hDiv}</th><th></th><th>${hQuot}</th><th>${hRem}</th><th><span class="sr">${hOrder}</span></th></tr></thead><tbody>` +
         rows.map(([x, q, r], i) => `<tr><td>${num(x)}</td><td class="op">: ${b} =</td><td>${num(q)}</td>` +
           `<td class="rem">${r}${r >= 10 ? ` <span class="as">→ ${DIGITS[r]}</span>` : ''}</td>` +
           (i === 0 ? `<td class="arrow" rowspan="${rows.length}" aria-hidden="true"></td>` : '') + '</tr>').join('') +
-        `</tbody></table><p class="result" style="margin-top:12px">Остатки снизу вверх: <b class="mono">${s}<sub>${b}</sub></b></p>`;
+        `</tbody></table><p class="result" style="margin-top:12px">${t('remUp')} <b class="mono">${s}<sub>${b}</sub></b></p>`;
     }
 
     // b → 10: tiles + Horner
     if (s.length > 32) {
-      tiles.innerHTML = `<p class="muted">В ${nameIn(b)} записи ${num(s.length)} разрядов. Плитки показываем для чисел до 32 разрядов.</p>`;
+      tiles.innerHTML = `<p class="muted">${t('tilesLong', b, num(s.length))}</p>`;
       sum.textContent = '';
     } else {
       const parts = [];
@@ -239,12 +260,12 @@
       }).join('');
       sum.innerHTML = `<span class="mono">${s}<sub>${b}</sub></span> = <span class="mono">${parts.join(' + ') || '0'}</span> = <b class="mono">${num(n)}<sub>10</sub></b>`;
     }
-    if (s.length > 20) horner.innerHTML = `<li class="muted">Шагов будет ${num(s.length)}, показываем схему для чисел до 20 разрядов.</li>`;
+    if (s.length > 20) horner.innerHTML = `<li class="muted">${t('hornerLong', num(s.length))}</li>`;
     else {
       let acc = 0n;
       horner.innerHTML = [...s].map((ch, k) => {
         const d = BigInt(DIGITS.indexOf(ch));
-        if (k === 0) { acc = d; return `<li>начинаем с ${ch}${d >= 10n ? ` = ${d}` : ''}: <b>${num(acc)}</b></li>`; }
+        if (k === 0) { acc = d; return `<li>${t('hornerStart', ch + (d >= 10n ? ` = ${d}` : ''))}: <b>${num(acc)}</b></li>`; }
         const prev = acc;
         acc = acc * B + d;
         return `<li>${num(prev)} · ${b} + ${d} = <b>${num(acc)}</b></li>`;
@@ -253,12 +274,12 @@
 
     // 2 ↔ 8 ↔ 16 via bit groups
     const bits = n.toString(2);
-    if (bits.length > 64) { chunks.innerHTML = '<p class="muted">Группы показываем для чисел до 64 бит.</p>'; return; }
+    if (bits.length > 64) { chunks.innerHTML = `<p class="muted">${t('groupsLong')}</p>`; return; }
     const row = size => {
       const padded = bits.padStart(Math.ceil(bits.length / size) * size, '0');
       const parts = padded.match(new RegExp(`.{${size}}`, 'g'));
       const to = size === 3 ? 8 : 16;
-      return `<p class="lbl">Группы по ${size} → ${to === 8 ? 'восьмеричная' : 'шестнадцатеричная'}${fracNum() ? ', целая часть' : ''}</p><div class="chunks">` +
+      return `<p class="lbl">${t('groupsLbl', size, to, fracNum() !== 0n)}</p><div class="chunks">` +
         parts.map(p => `<div class="chunk"><span class="cb">${p}</span><span class="cd">${parseInt(p, 2).toString(16).toUpperCase()}</span></div>`).join('') +
         `</div><p class="result">${groupStr(bits, size)}<sub>2</sub> = <b class="mono">${n.toString(to).toUpperCase()}<sub>${to}</sub></b></p>`;
     };
@@ -267,14 +288,14 @@
 
   /* ---------- fractional part ---------- */
   function renderFrac(b) {
-    const B = BigInt(b), den = state.den, F = fracNum();
-    $('#frT').textContent = `Дробная часть: из десятичной в ${nameTo(b)} и обратно (b = ${b})`;
+    const B = BigInt(b), den = state.den, F = fracNum(), zero = '0' + decSep();
+    $('#frT').textContent = t('frT', b);
     const mul = $('#fracMul'), tiles = $('#fracTiles'), sum = $('#fracSum');
     if (state.empty || F === 0n) {
-      $('#frToEx').textContent = $('#frFromEx').textContent = 'Пример';
-      mul.innerHTML = `<p class="muted">${state.empty ? 'Впишите число в конвертер наверху.' : 'У этого числа нет дробной части.'}</p>` +
-        '<p style="margin:10px 0 0"><button type="button" class="ghost" data-demo>Подставить 12,375</button></p>';
-      tiles.innerHTML = '<p class="muted">Пример появится, когда у числа будет дробная часть.</p>';
+      $('#frToEx').textContent = $('#frFromEx').textContent = t('example');
+      mul.innerHTML = `<p class="muted">${state.empty ? t('fracTypeFirst') : t('fracNone')}</p>` +
+        `<p style="margin:10px 0 0"><button type="button" class="ghost" data-demo>${t('demo')}</button></p>`;
+      tiles.innerHTML = `<p class="muted">${t('fracLater')}</p>`;
       sum.textContent = '';
       return;
     }
@@ -282,7 +303,7 @@
     const digitsStr = e.pre + (e.rep ? `(${e.rep})` : '') + (e.cut ? '…' : '');
 
     // 10 → b: repeated multiplication
-    $('#frToEx').innerHTML = `Пример: ${fd}<sub>10</sub> → ${b}-ичная`;
+    $('#frToEx').innerHTML = t('exTo', fd, b);
     const rows = [], seen = new Map();
     let r = F, rep = -1;
     while (r !== 0n && rows.length < 16) {
@@ -292,23 +313,24 @@
       rows.push([r, p, Number(p / den)]);
       r = p % den;
     }
-    mul.innerHTML = '<table class="ladder"><thead><tr><th>Дробь</th><th></th><th>Произведение</th><th>Цифра</th></tr></thead><tbody>' +
+    const [hFrac, hProd, hDigit] = t('mulHead');
+    mul.innerHTML = `<table class="ladder"><thead><tr><th>${hFrac}</th><th></th><th>${hProd}</th><th>${hDigit}</th></tr></thead><tbody>` +
       rows.map(([x, p, d], i) => `<tr${i === rep ? ' class="loop"' : ''}><td>${fmtRat(x, den, 10)}</td><td class="op">· ${b} =</td>` +
         `<td>${fmtRat(p, den, 10)}</td><td class="rem">${DIGITS[d]}${d >= 10 ? ` <span class="as">(${d})</span>` : ''}</td></tr>`).join('') +
       '</tbody></table>' +
-      (rep >= 0 ? `<p class="muted" style="margin-top:10px">Дробь ${fmtRat(r, den, 10)} уже была в строке ${rep + 1}, поэтому дальше цифры пойдут по кругу. Это период, его пишут в скобках.</p>` : '') +
-      (r !== 0n && rep < 0 ? `<p class="muted" style="margin-top:10px">Показаны первые ${rows.length} шагов, дробь продолжается.</p>` : '') +
-      `<p class="result" style="margin-top:12px">Цифры сверху вниз: <b class="mono">0,${digitsStr}<sub>${b}</sub></b></p>`;
+      (rep >= 0 ? `<p class="muted" style="margin-top:10px">${t('fracRepeat', fmtRat(r, den, 10), rep + 1)}</p>` : '') +
+      (r !== 0n && rep < 0 ? `<p class="muted" style="margin-top:10px">${t('fracCut', rows.length)}</p>` : '') +
+      `<p class="result" style="margin-top:12px">${t('digitsDown')} <b class="mono">${zero}${digitsStr}<sub>${b}</sub></b></p>`;
 
     // b → 10: negative powers, or the period formula
-    $('#frFromEx').innerHTML = `Пример: 0,${digitsStr}<sub>${b}</sub> → десятичная`;
+    $('#frFromEx').innerHTML = t('exFrom', zero + digitsStr, b);
     if (e.rep) {
       const m = e.pre.length, k = e.rep.length;
       const R = digitsVal(e.pre + e.rep, b), P = digitsVal(e.pre, b), D = B ** BigInt(m) * (B ** BigInt(k) - 1n);
-      tiles.innerHTML = `<p class="muted">В ${nameIn(b)} записи эта дробь бесконечная, поэтому сумма степеней тоже бесконечна. Сворачиваем её формулой для периода: m = ${m}, n = ${k}.</p>`;
-      sum.innerHTML = `<span class="mono">0,${digitsStr}<sub>${b}</sub></span> = <span class="mono">(${num(R)} − ${num(P)}) / (${b}<sup>${m}</sup> · (${b}<sup>${k}</sup> − 1)) = ${num(R - P)} / ${num(D)}</span> = <b class="mono">${fd}<sub>10</sub></b>`;
+      tiles.innerHTML = `<p class="muted">${t('fracInf', b, m, k)}</p>`;
+      sum.innerHTML = `<span class="mono">${zero}${digitsStr}<sub>${b}</sub></span> = <span class="mono">(${num(R)} − ${num(P)}) / (${b}<sup>${m}</sup> · (${b}<sup>${k}</sup> − 1)) = ${num(R - P)} / ${num(D)}</span> = <b class="mono">${fd}<sub>10</sub></b>`;
     } else if (e.cut || e.pre.length > 16) {
-      tiles.innerHTML = `<p class="muted">После запятой ${e.cut ? 'больше 60' : num(e.pre.length)} цифр. Плитки показываем для дробей до 16 цифр.</p>`;
+      tiles.innerHTML = `<p class="muted">${t('fracLong', e.cut, e.pre.length)}</p>`;
       sum.textContent = '';
     } else {
       const parts = [];
@@ -318,7 +340,7 @@
         return `<div class="tile${d ? '' : ' zero'}"><span class="t-d">${ch}${d >= 10 ? `<small>${d}</small>` : ''}</span>` +
           `<span class="t-w">× ${b}<sup>−${i + 1}</sup></span><span class="t-p">${val}</span></div>`;
       }).join('');
-      sum.innerHTML = `<span class="mono">0,${e.pre}<sub>${b}</sub></span> = <span class="mono">${parts.join(' + ')}</span> = <b class="mono">${fd}<sub>10</sub></b>`;
+      sum.innerHTML = `<span class="mono">${zero}${e.pre}<sub>${b}</sub></span> = <span class="mono">${parts.join(' + ')}</span> = <b class="mono">${fd}<sub>10</sub></b>`;
     }
   }
 
@@ -353,6 +375,21 @@
   }
 
   /* ---------- wiring ---------- */
+  function renderAll() {
+    updatePanel();
+    renderCustomLabel();
+    renderRows(null, true);
+    renderExotic(null);
+    renderExplain();
+  }
+  function setLang(l) {
+    lang = l === 'en' ? 'en' : 'ru';
+    C.setLang(lang);
+    try { localStorage.setItem(LANG_KEY, lang); } catch (err) { /* no storage */ }
+    applyStatic();
+    buildRows();
+    renderAll();
+  }
   function setValue(v, source, empty = false) {
     state.num = v.num;
     state.den = v.den;
@@ -412,6 +449,10 @@
     if (el.id === 'exB' && ![2, 8, 16].includes(state.ex)) el.value = state.ex;
   });
 
+  $('#langSeg').addEventListener('click', e => {
+    const b = e.target.closest('[data-lang]');
+    if (b && b.dataset.lang !== lang) setLang(b.dataset.lang);
+  });
   $('#rows').addEventListener('click', e => {
     const b = e.target.closest('[data-step]');
     if (!b) return;
@@ -468,21 +509,21 @@
   document.addEventListener('click', e => {
     const btn = e.target.closest('[data-copy]');
     if (!btn) return;
-    const t = $('#' + btn.dataset.copy);
-    const text = (t.tagName === 'TEXTAREA' ? t.value : t.textContent).replace(/\s/g, '');
+    const target = $('#' + btn.dataset.copy);
+    const text = (target.tagName === 'TEXTAREA' ? target.value : target.textContent).replace(/\s/g, '');
     if (!text || text === '—') return;
     const label = btn.querySelector('.copy-t');
-    const done = msg => {
-      label.textContent = msg;
+    const done = m => {
+      label.textContent = m;
       btn.classList.add('done');
-      setTimeout(() => { label.textContent = 'Копировать'; btn.classList.remove('done'); }, 1400);
+      setTimeout(() => { label.textContent = t('copy'); btn.classList.remove('done'); }, 1400);
     };
     let p;
     try { p = navigator.clipboard.writeText(text); } catch (err) { p = Promise.reject(err); }
-    p.then(() => done('Скопировано'), () => {
-      if (t.tagName === 'TEXTAREA') { t.focus(); t.select(); }
-      else { const r = document.createRange(); r.selectNodeContents(t); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
-      done('Выделено, нажмите Ctrl+C');
+    p.then(() => done(t('copied')), () => {
+      if (target.tagName === 'TEXTAREA') { target.focus(); target.select(); }
+      else { const r = document.createRange(); r.selectNodeContents(target); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+      done(t('selected'));
     });
   });
 
@@ -490,6 +531,10 @@
   addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => $$('textarea').forEach(autosize), 120); });
 
   /* ---------- boot: switches ripple from bit 0 up to the starting value ---------- */
+  lang = initialLang();
+  C.setLang(lang);
+  applyStatic();
+  buildRows();
   if (load()) $('#exNote').hidden = true;
   renderCustomLabel();
   renderRows(null, true);

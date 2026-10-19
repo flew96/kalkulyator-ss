@@ -12,57 +12,60 @@
 <body>
 <main class="wrap">
   <header class="top">
-    <h1>Калькулятор СС<span class="base-mark">₁₀</span></h1>
-    <p class="lede">Перевод между системами счисления. Впишите число в любое поле, и остальные пересчитаются сразу. Основания от 2 до 36, целые и дробные числа любой длины.</p>
+    <h1><span data-i18n="h1">Калькулятор СС</span><span class="base-mark">₁₀</span></h1>
+    <div class="lang" id="langSeg" role="group" aria-label="Язык / Language">
+      <button type="button" data-lang="ru" lang="ru">RU</button><button type="button" data-lang="en" lang="en">EN</button>
+    </div>
+    <p class="lede" data-i18n="lede">Перевод между системами счисления. Впишите число в любое поле, и остальные пересчитаются сразу. Основания от 2 до 36, целые и дробные числа любой длины.</p>
   </header>
 
-  <section class="conv" aria-label="Перевод чисел">
+  <section class="conv" aria-label="Перевод чисел" data-i18n-attr="aria-label:convAria">
     <div class="conv-head">
       <div class="how">
-        <p class="how-t">Впишите число в строку той системы, в которой оно записано</p>
-        <p>Ответ сразу появится в остальных строках. Дробь пишите через запятую: 12,375. Период пишется в скобках: 0,(3).<span id="exNote"> Сейчас для примера вписано 1958: нажмите на поле, сотрите и впишите своё.</span></p>
+        <p class="how-t" data-i18n="howT">Впишите число в строку той системы, в которой оно записано</p>
+        <p><span data-i18n="howP">Ответ сразу появится в остальных строках. Дробь пишите через запятую: 12,375. Период пишется в скобках: 0,(3).</span><span id="exNote" data-i18n="exNote"> Сейчас для примера вписано 1958: нажмите на поле, сотрите и впишите своё.</span></p>
       </div>
-      <button type="button" class="ghost" id="clearBtn">Очистить</button>
+      <button type="button" class="ghost" id="clearBtn" data-i18n="clear">Очистить</button>
     </div>
     <div id="rows"></div>
   </section>
 
   <section class="sec" aria-labelledby="hPanel">
     <div class="sec-head">
-      <h2 id="hPanel">Пульт с тумблерами</h2>
-      <p>То же число в битах. Щёлкните тумблер, чтобы переключить один бит, и посмотрите, как меняются цифры выше.</p>
+      <h2 id="hPanel" data-i18n="hPanel">Пульт с тумблерами</h2>
+      <p data-i18n="panelP">То же число в битах. Щёлкните тумблер, чтобы переключить один бит, и посмотрите, как меняются цифры выше.</p>
     </div>
     <div class="panel">
       <div class="p-head">
-        <div class="plate"><span class="plate-name">Калькулятор СС</span><span class="plate-model">Р-36</span></div>
-        <div class="vfd"><span class="vfd-label">Дес</span><output id="vfd"></output></div>
-        <div class="sign"><span class="led" id="signLed"></span><span>Знак</span></div>
+        <div class="plate"><span class="plate-name" data-i18n="plate">Калькулятор СС</span><span class="plate-model" data-i18n="plateModel">Р-36</span></div>
+        <div class="vfd"><span class="vfd-label" data-i18n="vfdLabel">Дес</span><output id="vfd"></output></div>
+        <div class="sign"><span class="led" id="signLed"></span><span data-i18n="sign">Знак</span></div>
       </div>
       <div class="bank" id="bank"></div>
       <p class="p-note" id="pnote" hidden></p>
       <div class="p-controls">
         <div class="ctl">
-          <span class="ctl-label" id="wLbl">Разрядность</span>
+          <span class="ctl-label" id="wLbl" data-i18n="wLbl">Разрядность</span>
           <div class="seg" id="widthSeg" role="group" aria-labelledby="wLbl">
             <button type="button" data-w="8">8</button><button type="button" data-w="16">16</button><button type="button" data-w="32">32</button><button type="button" data-w="64">64</button>
           </div>
         </div>
         <div class="ctl">
-          <span class="ctl-label" id="gLbl">Группы под тумблерами</span>
+          <span class="ctl-label" id="gLbl" data-i18n="gLbl">Группы под тумблерами</span>
           <div class="seg" id="groupSeg" role="group" aria-labelledby="gLbl">
-            <button type="button" class="g-btn" data-g="3">по 3 → восьм.</button><button type="button" class="g-btn" data-g="4">по 4 → шестн.</button>
+            <button type="button" class="g-btn" data-g="3" data-i18n="g3">по 3 → восьм.</button><button type="button" class="g-btn" data-g="4" data-i18n="g4">по 4 → шестн.</button>
           </div>
         </div>
         <div class="ctl">
-          <span class="ctl-label" id="kLbl">Операции</span>
+          <span class="ctl-label" id="kLbl" data-i18n="kLbl">Операции</span>
           <div class="keys" id="keys" role="group" aria-labelledby="kLbl">
-            <button type="button" class="key wide" data-op="clr" title="Обнулить">Сброс</button>
-            <button type="button" class="key" data-op="inc" title="Прибавить 1">+1</button>
-            <button type="button" class="key" data-op="dec" title="Отнять 1">−1</button>
-            <button type="button" class="key" data-op="shl" title="Сдвиг влево: умножить на 2" aria-label="Сдвиг влево">≪</button>
-            <button type="button" class="key" data-op="shr" title="Сдвиг вправо: разделить на 2" aria-label="Сдвиг вправо">≫</button>
-            <button type="button" class="key wide" data-op="not" title="Инвертировать все биты в пределах разрядности">Не</button>
-            <button type="button" class="key" data-op="neg" title="Сменить знак" aria-label="Сменить знак">±</button>
+            <button type="button" class="key wide" data-op="clr" title="Обнулить" data-i18n="kClr" data-i18n-attr="title:kClrT">Сброс</button>
+            <button type="button" class="key" data-op="inc" title="Прибавить 1" data-i18n-attr="title:kIncT">+1</button>
+            <button type="button" class="key" data-op="dec" title="Отнять 1" data-i18n-attr="title:kDecT">−1</button>
+            <button type="button" class="key" data-op="shl" title="Сдвиг влево: умножить на 2" aria-label="Сдвиг влево" data-i18n-attr="title:kShlT;aria-label:kShlA">≪</button>
+            <button type="button" class="key" data-op="shr" title="Сдвиг вправо: разделить на 2" aria-label="Сдвиг вправо" data-i18n-attr="title:kShrT;aria-label:kShrA">≫</button>
+            <button type="button" class="key wide" data-op="not" title="Инвертировать все биты в пределах разрядности" data-i18n="kNot" data-i18n-attr="title:kNotT">Не</button>
+            <button type="button" class="key" data-op="neg" title="Сменить знак" aria-label="Сменить знак" data-i18n-attr="title:kNegT;aria-label:kNegT">±</button>
           </div>
         </div>
       </div>
@@ -71,25 +74,25 @@
 
   <section class="sec" aria-labelledby="hEx">
     <div class="sec-head">
-      <h2 id="hEx">Как переводить вручную</h2>
-      <p>Сначала общий способ для любого основания <i class="v">b</i>, под ним тот же способ на числе из конвертера.</p>
+      <h2 id="hEx" data-i18n="hEx">Как переводить вручную</h2>
+      <p data-i18n="exP">Сначала общий способ для любого основания <i class="v">b</i>, под ним тот же способ на числе из конвертера.</p>
     </div>
     <div class="ex-ctl">
-      <span class="ex-ctl-label" id="exLbl">Основание <i class="v">b</i>:</span>
+      <span class="ex-ctl-label" id="exLbl" data-i18n="exLbl">Основание <i class="v">b</i>:</span>
       <div class="chips" id="exChips" role="group" aria-labelledby="exLbl">
         <button type="button" class="chip" data-ex="2">2</button>
         <button type="button" class="chip" data-ex="8">8</button>
         <button type="button" class="chip" data-ex="16">16</button>
-        <label class="own" id="exOwnWrap">своё <input type="number" id="exB" min="2" max="36" value="12" inputmode="numeric" aria-label="Своё основание от 2 до 36"></label>
+        <label class="own" id="exOwnWrap"><span data-i18n="exOwn">своё</span> <input type="number" id="exB" min="2" max="36" value="12" inputmode="numeric" aria-label="Своё основание от 2 до 36" data-i18n-attr="aria-label:exBA"></label>
       </div>
     </div>
-    <p class="muted" id="exNeg" hidden>Число отрицательное: переводим модуль, а минус переносим без изменений.</p>
+    <p class="muted" id="exNeg" hidden></p>
     <div class="ex">
       <div class="card">
         <h3 id="exToT"></h3>
         <div class="algo">
-          <p class="lbl">Общий способ: деление с остатком</p>
-          <ol>
+          <p class="lbl" data-i18n="divLbl">Общий способ: деление с остатком</p>
+          <ol data-i18n="divOl">
             <li>Делим число <i class="v">N</i> на <i class="v">b</i> с остатком: <span class="f">N = q<sub>1</sub>·b + r<sub>0</sub></span>.</li>
             <li>Частное снова делим на <i class="v">b</i>: <span class="f">q<sub>1</sub> = q<sub>2</sub>·b + r<sub>1</sub></span>. Повторяем, пока частное не станет 0.</li>
             <li>Каждый остаток меньше <i class="v">b</i>, поэтому это готовая цифра. Записываем остатки в обратном порядке: <span class="f">(r<sub>k</sub> … r<sub>1</sub> r<sub>0</sub>)<sub>b</sub></span>.</li>
@@ -102,9 +105,9 @@
       <div class="card">
         <h3 id="exFromT"></h3>
         <div class="algo">
-          <p class="lbl">Общий способ: сумма по степеням</p>
+          <p class="lbl" data-i18n="powLbl">Общий способ: сумма по степеням</p>
           <span class="f block">N = a<sub>n−1</sub>·b<sup>n−1</sup> + … + a<sub>1</sub>·b<sup>1</sup> + a<sub>0</sub>·b<sup>0</sup></span>
-          <ol>
+          <ol data-i18n="powOl">
             <li>Нумеруем цифры справа налево, начиная с нуля: самая правая цифра это <span class="f">a<sub>0</sub></span>.</li>
             <li>Буквы заменяем числами: A = 10, B = 11 и так далее.</li>
             <li>Цифру с номером <i class="v">k</i> умножаем на <span class="f">b<sup>k</sup></span> и складываем все произведения.</li>
@@ -114,9 +117,9 @@
         <div class="tiles" id="tiles"></div>
         <p class="sumline" id="sumline"></p>
         <div class="algo">
-          <p class="lbl">То же без степеней: схема Горнера</p>
+          <p class="lbl" data-i18n="hornerLbl">То же без степеней: схема Горнера</p>
           <span class="f block">N = (…((a<sub>n−1</sub>·b + a<sub>n−2</sub>)·b + a<sub>n−3</sub>)·b + …)·b + a<sub>0</sub></span>
-          <p>Берём первую цифру слева, умножаем на <i class="v">b</i> и прибавляем следующую. Повторяем до последней цифры.</p>
+          <p data-i18n="hornerP">Берём первую цифру слева, умножаем на <i class="v">b</i> и прибавляем следующую. Повторяем до последней цифры.</p>
         </div>
         <ul class="horner" id="horner"></ul>
       </div>
@@ -125,8 +128,8 @@
         <div class="frac-grid">
           <div class="fcol">
             <div class="algo">
-              <p class="lbl">Из десятичной в b-ичную: умножение</p>
-              <ol>
+              <p class="lbl" data-i18n="fracMulLbl">Из десятичной в b-ичную: умножение</p>
+              <ol data-i18n="fracMulOl">
                 <li>Берём дробную часть <i class="v">F</i> и умножаем на <i class="v">b</i>: <span class="f">F·b = c<sub>1</sub> + F<sub>1</sub></span>, где <span class="f">c<sub>1</sub></span> целое, а <span class="f">F<sub>1</sub></span> снова дробь меньше 1.</li>
                 <li>Целое <span class="f">c<sub>1</sub></span> становится первой цифрой после запятой. С дробью <span class="f">F<sub>1</sub></span> повторяем то же самое.</li>
                 <li>Цифры читаем сверху вниз. Останавливаемся, когда дробь стала 0. Если дробь повторилась, дальше цифры пойдут по кругу: это период, его пишут в скобках.</li>
@@ -137,9 +140,9 @@
           </div>
           <div class="fcol">
             <div class="algo">
-              <p class="lbl">Из b-ичной в десятичную: отрицательные степени</p>
-              <span class="f block">0,a<sub>−1</sub>a<sub>−2</sub>…a<sub>−m</sub> = a<sub>−1</sub>·b<sup>−1</sup> + a<sub>−2</sub>·b<sup>−2</sup> + … + a<sub>−m</sub>·b<sup>−m</sup></span>
-              <ol>
+              <p class="lbl" data-i18n="fracPowLbl">Из b-ичной в десятичную: отрицательные степени</p>
+              <span class="f block" data-i18n="fracPowF">0,a<sub>−1</sub>a<sub>−2</sub>…a<sub>−m</sub> = a<sub>−1</sub>·b<sup>−1</sup> + a<sub>−2</sub>·b<sup>−2</sup> + … + a<sub>−m</sub>·b<sup>−m</sup></span>
+              <ol data-i18n="fracPowOl">
                 <li>Цифры после запятой нумеруем слева направо: −1, −2, −3 и так далее.</li>
                 <li>Цифру с номером −k делим на <span class="f">b<sup>k</sup></span> и складываем результаты.</li>
                 <li>Периодическую дробь сворачиваем формулой <span class="f">0,P(R)<sub>b</sub> = (PR − P) / (b<sup>m</sup>·(b<sup>n</sup> − 1))</span>. Здесь P и PR читаются как целые числа в b-ичной системе, m — длина P, n — длина периода R.</li>
@@ -152,10 +155,10 @@
         </div>
       </div>
       <div class="card wide">
-        <h3>Из любой системы в любую</h3>
+        <h3 data-i18n="anyT">Из любой системы в любую</h3>
         <div class="algo">
-          <p>Общий путь из <i class="v">p</i>-ичной в <i class="v">q</i>-ичную идёт через десятичную: сначала <span class="f">p → 10</span> суммой по степеням, потом <span class="f">10 → q</span> делением с остатком.</p>
-          <p>Между 2, 8 и 16 есть короткий путь. Так как 8 = 2<sup>3</sup> и 16 = 2<sup>4</sup>, каждая восьмеричная цифра это ровно 3 бита, а шестнадцатеричная ровно 4. Двоичное число режем на группы справа налево и переводим каждую группу отдельно. Обратно так же: каждую цифру заменяем её группой битов.</p>
+          <p data-i18n="anyP1">Общий путь из <i class="v">p</i>-ичной в <i class="v">q</i>-ичную идёт через десятичную: сначала <span class="f">p → 10</span> суммой по степеням, потом <span class="f">10 → q</span> делением с остатком.</p>
+          <p data-i18n="anyP2">Между 2, 8 и 16 есть короткий путь. Так как 8 = 2<sup>3</sup> и 16 = 2<sup>4</sup>, каждая восьмеричная цифра это ровно 3 бита, а шестнадцатеричная ровно 4. Двоичное число режем на группы справа налево и переводим каждую группу отдельно. Обратно так же: каждую цифру заменяем её группой битов.</p>
         </div>
         <div class="chunk-row" id="chunks"></div>
       </div>
@@ -164,32 +167,32 @@
 
   <section class="sec" aria-labelledby="hExo">
     <div class="sec-head">
-      <h2 id="hExo">Необычные системы</h2>
-      <p>Не все записи чисел устроены как десятичная. Эти четыре считаются из того же значения.</p>
+      <h2 id="hExo" data-i18n="hExo">Необычные системы</h2>
+      <p data-i18n="exoP">Не все записи чисел устроены как десятичная. Эти четыре считаются из того же значения.</p>
     </div>
     <p class="muted" id="exoNote" hidden></p>
     <div class="exo">
       <div class="card exo-roman">
-        <label class="exo-name" for="fr">Римская</label>
+        <label class="exo-name" for="fr" data-i18n="roman">Римская</label>
         <textarea id="fr" class="exo-val" rows="1" spellcheck="false" autocomplete="off" autocapitalize="characters" placeholder="MCMLVIII" aria-describedby="fre frNote"></textarea>
         <p class="err" id="fre" hidden></p>
         <p class="exo-cap" id="frNote"></p>
         <div class="exo-foot"><button type="button" class="copy" data-copy="fr"></button></div>
       </div>
       <div class="card">
-        <span class="exo-name">Сбалансированная троичная</span>
+        <span class="exo-name" data-i18n="setunName">Сбалансированная троичная</span>
         <div class="exo-val" id="xSetun"></div>
-        <p class="exo-cap">Цифры −1, 0 и +1. Знак не нужен: у отрицательного числа плюсы и минусы просто меняются местами. На этой системе работала ЭВМ «Сетунь» (МГУ, 1958).</p>
+        <p class="exo-cap" data-i18n="setunCap">Цифры −1, 0 и +1. Знак не нужен: у отрицательного числа плюсы и минусы просто меняются местами. На этой системе работала ЭВМ «Сетунь» (МГУ, 1958).</p>
         <div class="exo-foot"><button type="button" class="copy" data-copy="xSetun"></button></div>
       </div>
       <div class="card">
-        <span class="exo-name">Фибоначчиева</span>
+        <span class="exo-name" data-i18n="fibName">Фибоначчиева</span>
         <div class="exo-val" id="xFib"></div>
         <p class="exo-cap" id="xFibCap"></p>
         <div class="exo-foot"><button type="button" class="copy" data-copy="xFib"></button></div>
       </div>
       <div class="card">
-        <span class="exo-name">Факториальная</span>
+        <span class="exo-name" data-i18n="factName">Факториальная</span>
         <div class="exo-val" id="xFact"></div>
         <p class="exo-cap" id="xFactCap"></p>
         <div class="exo-foot"><button type="button" class="copy" data-copy="xFact"></button></div>
@@ -197,10 +200,11 @@
     </div>
   </section>
 
-  <p class="foot">Числа хранятся как точные дроби из BigInt, поэтому длина не ограничена и округления нет. Бесконечная дробь показывается с периодом в скобках, а если период длиннее 60 знаков, запись обрезается многоточием. Пульт показывает целую часть до 64 бит.</p>
+  <p class="foot" data-i18n="foot">Числа хранятся как точные дроби из BigInt, поэтому длина не ограничена и округления нет. Бесконечная дробь показывается с периодом в скобках, а если период длиннее 60 знаков, запись обрезается многоточием. Пульт показывает целую часть до 64 бит.</p>
 </main>
 
 <script src="convert.js"></script>
+<script src="i18n.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

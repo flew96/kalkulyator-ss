@@ -125,6 +125,25 @@ test('factorial base', () => {
   }
 });
 
+test('english: point separates the fraction, comma groups thousands', () => {
+  C.setLang('en');
+  try {
+    assert.equal(show('12.375', 10, 2), '1100.011');
+    assert.equal(show('0.1', 10, 2), '0.0(0011)');
+    same(parse('1,958', 10), rat(1958, 1));
+    same(parse('1,234.5', 10), rat(2469, 2));
+    assert.equal(C.nameOf(16), 'hexadecimal');
+    assert.equal(C.nameOf(23), 'base-23');
+    assert.match(parse('19', 8).error, /“9”.*octal.*0–7/);
+    assert.match(parse('G', 16).error, /0–9 and A–F/);
+    assert.equal(C.num(1958n), '1,958');
+    assert.match(C.toRoman(0n).note, /no zero/);
+  } finally {
+    C.setLang('ru');
+  }
+  assert.equal(show('12,375', 10, 2), '1100,011');
+});
+
 test('helpers', () => {
   assert.equal(C.groupStr('1111010', 4), '111 1010');
   assert.equal(C.plural(1, 'разряд', 'разряда', 'разрядов'), 'разряд');
